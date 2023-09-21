@@ -69,6 +69,11 @@ def launch_setup(context, *args, **kwargs):
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     hardware_type_launch_arg = LaunchConfiguration('hardware_type')
 
+    ###########################
+    motor_configs_launch_arg = LaunchConfiguration('motor_configs')
+    mode_configs_launch_arg = LaunchConfiguration('mode_configs')
+    ##########################
+
     # sets use_sim_time parameter to 'true' if using gazebo hardware
     use_sim_time_param = determine_use_sim_time_param(
         context=context,
@@ -183,6 +188,20 @@ def launch_setup(context, *args, **kwargs):
         }]
     )
 
+    xs_sdk_sim_node = Node(
+        package='interbotix_xs_sdk',
+        executable='xs_sdk_sim.py',
+        name='xs_sdk_sim',
+        namespace=robot_name_launch_arg,
+        arguments=[],
+        parameters=[{
+            'motor_configs': motor_configs_launch_arg,
+            'mode_configs': mode_configs_launch_arg,
+            'robot_description': robot_description_launch_arg,
+            'use_sim_time': use_sim_time_param,
+        }],
+        output={'both': 'screen'},
+    )
     xsarm_description_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -231,11 +250,40 @@ def launch_setup(context, *args, **kwargs):
         load_arm_controller_event,
         load_gripper_controller_event,
         xsarm_description_launch_include,
+        xs_sdk_sim_node
     ]
 
 
 def generate_launch_description():
     declared_arguments = []
+
+###################################################
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'motor_configs',
+            default_value=[PathJoinSubstitution([
+                FindPackageShare('interbotix_xsarm_control'),
+                'config',
+                LaunchConfiguration('robot_model')]),
+                '.yaml'
+            ],
+            description="the file path to the 'motor config' YAML file.",
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'mode_configs',
+            default_value=PathJoinSubstitution([
+                FindPackageShare('interbotix_xsarm_control'),
+                'config',
+                'modes.yaml',
+            ]),
+            description="the file path to the 'mode config' YAML file.",
+        )
+    )
+#########################################################
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_model',
